@@ -3,7 +3,7 @@ $(document).ready(function () {
     // enable fileuploader plugin
     var $fileuploader = $('input.gallery_media').fileuploader({
         fileMaxSize: maxSizeInMb,
-        extensions: extensionsVault,    
+        extensions: extensionsVault,
 
         captions: lang,
 
@@ -93,6 +93,34 @@ $(document).ready(function () {
                 item.image.find('.fileuploader-item-icon i').html('')
                     .addClass('fileuploader-icon-' + (['image', 'video', 'audio'].indexOf(item.format) > -1 ? item.format : 'file'));
 
+                // humaun: video function to generate video thumbnail
+                if (item.format === 'video') {
+                    const video = document.createElement('video');
+                    video.crossOrigin = 'anonymous'; // important for CORS safety
+                    video.src = item.reader?.src || item.file?.url || item.data?.url;
+                    video.muted = true;
+                    video.playsInline = true;
+                    video.preload = 'metadata';
+
+                    video.addEventListener('loadeddata', function () {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            const scale = 0.4;
+                            canvas.width = video.videoWidth * scale;
+                            canvas.height = video.videoHeight * scale;
+
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                            const imgURL = canvas.toDataURL('image/png');
+                            item.image.find('img, canvas').remove();
+                            item.image.prepend('<img src="' + imgURL + '" alt="Video thumbnail">');
+                        } catch (err) {
+                            console.warn('⚠️ CORS blocked video thumbnail:', err);
+                            item.image.html('<div class="fileuploader-item-icon fileuploader-icon-video"></div>');
+                        }
+                    });
+                }
                 // check the image size
                 if (item.format == 'image' && item.upload && !item.imU) {
                     if (item.reader.node && (item.reader.width < 100 || item.reader.height < 100)) {
